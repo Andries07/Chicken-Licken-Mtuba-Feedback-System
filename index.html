@@ -235,7 +235,7 @@ function getDeviceId(){
   }
   try { v = localStorage.getItem('cl_deviceId') || ''; } catch(_) { v=''; }
   if (v) return v;
-  return 'UNKNOWN';
+  return 'TABLET-01';
 }
 
 function getStoreId(){
@@ -249,7 +249,7 @@ function getStoreId(){
     const cached = localStorage.getItem('cl_storeId')||'';
     if(cached) return cached;
   }catch(_){}
-  return 'CL-Witbank-Highveld';
+  return 'CL-Mtuba';
 }
 function getDeviceLabel(){
   let v=getParam('device');
@@ -264,10 +264,22 @@ function getDeviceLabel(){
   return 'Front Counter';
 }
 
+
+/* ===== CLEAR STALE STORE/DEVICE IF URL PARAMS PRESENT ===== */
+(function(){
+  try{
+    const u = new URL(location.href);
+    const storeParam = u.searchParams.get('store') || u.searchParams.get('Store') || u.searchParams.get('storeId');
+    const deviceParam = u.searchParams.get('deviceId') || u.searchParams.get('device') || u.searchParams.get('did');
+    if(storeParam){ localStorage.setItem('cl_storeId', storeParam.replace(/\+/g,' ').trim()); }
+    if(deviceParam){ localStorage.setItem('cl_deviceId', deviceParam.replace(/\+/g,' ').trim()); }
+  }catch(_){}
+})();
+
 /* ===== CONFIG ===== */
 const CFG = {
-  apiUrl: "https://script.google.com/macros/s/AKfycbzKKnv_zRA20JHbnBnoo2S9PO9Rho-OqKIFaRCihD7eXkbrgcxZJQxrm95aQ5bHjBZdZg/exec",
-  token:  "CHANGE_ME_SUPER_SECRET",
+  apiUrl: "https://script.google.com/macros/s/AKfycbyeoiTY6LumCkZLYMCkJdKoRZMqAWAUgSJZi99L9df55Yan-8a_mhtd6Y7KFV4r3Ax6bw/exec",
+  token:  "CL-Mtuba-2025-Secure-Token-X9k",
   storeId:     getStoreId(),
   deviceLabel: getDeviceLabel(),
   deviceId:    getDeviceId()
