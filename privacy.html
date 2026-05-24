@@ -184,6 +184,32 @@
       .content { padding: 20px 14px 48px; }
       .section-body { padding: 16px 14px 16px 20px; }
     }
+
+    /* ── Auto-return bar ── */
+    .return-bar {
+      position: fixed;
+      bottom: 0; left: 0; right: 0;
+      background: #111;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 12px 20px;
+      z-index: 100;
+      font-family: Arial, Helvetica, sans-serif;
+    }
+    .return-bar .msg { font-size: 13px; opacity: .9; white-space: nowrap; }
+    .return-bar .msg span { font-weight: 900; color: #ff6900; }
+    .return-bar .back-btn {
+      background: #ff6900; color: #fff; border: none;
+      border-radius: 8px; padding: 8px 18px;
+      font-weight: 900; font-size: 13px; cursor: pointer; white-space: nowrap; flex-shrink: 0;
+    }
+    .return-bar .back-btn:hover { background: #e05d00; }
+    .progress-track { position: fixed; bottom: 48px; left: 0; right: 0; height: 3px; background: #333; z-index: 100; }
+    .progress-track .progress-fill { height: 3px; background: #ff6900; width: 100%; transition: width 1s linear; }
+    body { padding-bottom: 64px; }
   </style>
 </head>
 <body>
@@ -557,6 +583,50 @@
     <p>&copy; 2025 Chicken Licken (Pty) Ltd. All rights reserved.</p>
     <p style="margin-top: 4px;">This policy is governed by the laws of the Republic of South Africa.</p>
   </div>
+
+
+  <!-- ── AUTO-RETURN BAR ── -->
+  <div class="progress-track"><div class="progress-fill" id="timerBar"></div></div>
+  <div class="return-bar">
+    <div class="msg">Returning to survey in <span id="countdown">120</span>s</div>
+    <button class="back-btn" onclick="goBack()">&#8592; Back to Survey</button>
+  </div>
+
+  <script>
+    var SECONDS = 120;
+    var remaining = SECONDS;
+    var bar = document.getElementById('timerBar');
+    var cd  = document.getElementById('countdown');
+
+    function goBack(){
+      // Go back in history if opened via link, otherwise close tab / go to index
+      if (document.referrer && document.referrer !== window.location.href) {
+        window.history.back();
+      } else {
+        window.location.href = 'index.html';
+      }
+    }
+
+    // Kick off countdown
+    var interval = setInterval(function(){
+      remaining--;
+      cd.textContent = remaining;
+      bar.style.width = Math.round((remaining / SECONDS) * 100) + '%';
+      if (remaining <= 0) {
+        clearInterval(interval);
+        goBack();
+      }
+    }, 1000);
+
+    // Reset timer if user scrolls / interacts — they're actively reading
+    ['scroll','click','keydown','touchstart'].forEach(function(ev){
+      document.addEventListener(ev, function(){
+        remaining = SECONDS;
+        cd.textContent = remaining;
+        bar.style.width = '100%';
+      }, { passive: true });
+    });
+  </script>
 
 </body>
 </html>
