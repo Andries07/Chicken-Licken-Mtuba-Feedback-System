@@ -127,7 +127,7 @@
   }
 </style>
 
-<!-- minimal hotfix (no visual change to your design) -->
+<!-- minimal hotfix (no visual  to your design) -->
 <style>
   html, body { height:100%; min-height:100%; }
   .home{ min-height:100svh !important; }
@@ -267,7 +267,7 @@ function getDeviceLabel(){
 /* ===== CONFIG ===== */
 const CFG = {
   apiUrl: "https://script.google.com/macros/s/AKfycbzKKnv_zRA20JHbnBnoo2S9PO9Rho-OqKIFaRCihD7eXkbrgcxZJQxrm95aQ5bHjBZdZg/exec",
-  token:  "PASTE_YOUR_NEW_TOKEN_HERE",
+  token:  "CHANGE_ME_SUPER_SECRET",
   storeId:     getStoreId(),
   deviceLabel: getDeviceLabel(),
   deviceId:    getDeviceId()
@@ -745,7 +745,7 @@ window.startSurvey = window.startSurvey || function(){
 
   window.addEventListener('load',   ()=>{ schedule(); ping('load'); });
   window.addEventListener('focus',  schedule);
-  document.addEventListener('visibilitychange', ()=>{ if (document.visibilityState==='visible') schedule(); });
+  document.addEventListener('visibility', ()=>{ if (document.visibilityState==='visible') schedule(); });
 })();
 </script>
 
