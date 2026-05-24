@@ -265,24 +265,28 @@ function getDeviceLabel(){
 }
 
 
-/* ===== CLEAR STALE STORE/DEVICE IF URL PARAMS PRESENT ===== */
+/* ===== CONFIG ===== */
+/* NOTE: URL params always win. Hardcoded fallbacks are for this specific tablet. */
 (function(){
   try{
     const u = new URL(location.href);
-    const storeParam = u.searchParams.get('store') || u.searchParams.get('Store') || u.searchParams.get('storeId');
-    const deviceParam = u.searchParams.get('deviceId') || u.searchParams.get('device') || u.searchParams.get('did');
-    if(storeParam){ localStorage.setItem('cl_storeId', storeParam.replace(/\+/g,' ').trim()); }
-    if(deviceParam){ localStorage.setItem('cl_deviceId', deviceParam.replace(/\+/g,' ').trim()); }
+    // Always write URL params to localStorage so they survive page reloads
+    const sp = u.searchParams;
+    const storeP  = sp.get('store') || sp.get('Store') || sp.get('storeId');
+    const deviceP = sp.get('deviceId') || sp.get('did') || sp.get('DEVICEID');
+    const labelP  = sp.get('device');
+    if(storeP)  localStorage.setItem('cl_storeId',    storeP.replace(/\+/g,' ').trim());
+    if(deviceP) localStorage.setItem('cl_deviceId',   deviceP.replace(/\+/g,' ').trim());
+    if(labelP)  localStorage.setItem('cl_deviceLabel',labelP.replace(/\+/g,' ').trim());
   }catch(_){}
 })();
 
-/* ===== CONFIG ===== */
 const CFG = {
   apiUrl: "https://script.google.com/macros/s/AKfycbyeoiTY6LumCkZLYMCkJdKoRZMqAWAUgSJZi99L9df55Yan-8a_mhtd6Y7KFV4r3Ax6bw/exec",
   token:  "CL-Mtuba-2025-Secure-Token-X9k",
-  storeId:     getStoreId(),
-  deviceLabel: getDeviceLabel(),
-  deviceId:    getDeviceId()
+  storeId:     (function(){ try{ return localStorage.getItem('cl_storeId')||'CL-Mtuba'; }catch(_){ return 'CL-Mtuba'; } })(),
+  deviceId:    (function(){ try{ return localStorage.getItem('cl_deviceId')||'TABLET-01'; }catch(_){ return 'TABLET-01'; } })(),
+  deviceLabel: (function(){ try{ return localStorage.getItem('cl_deviceLabel')||'Front Counter'; }catch(_){ return 'Front Counter'; } })()
 };
 
 /* ===== QUESTIONS ===== */
@@ -583,6 +587,7 @@ function toast(msg){const s=document.getElementById('statusTxt');if(!s)return;s.
     "bronkhorstspruit":"CL-Bronkhorstspruit",
     "ok":"CL-Ok",
     "jumbo":"CL-Jumbo",
+   "mtuba":"CL-Mtuba",
   };
 
   var slug  = (qp('s')||'').toLowerCase();
