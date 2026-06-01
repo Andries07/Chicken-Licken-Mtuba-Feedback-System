@@ -385,6 +385,59 @@ function restoreFormState(){
 // Restore form state on page load if returning from privacy page
 (function(){ restoreFormState(); })();
 
+
+/* ===== SURVEY INACTIVITY TIMER — 4 minutes, silent, resets on interaction ===== */
+(function(){
+  var SURVEY_TIMEOUT_MS = 4 * 60 * 1000; // 4 minutes
+  var surveyTimer = null;
+
+  function resetSurveyTimer(){
+    clearTimeout(surveyTimer);
+    // Only run timer when survey screen is visible
+    var survey = document.getElementById('survey');
+    if (!survey || survey.style.display === 'none') return;
+    surveyTimer = setTimeout(function(){
+      // Silent return to home screen — reset everything
+      var survey = document.getElementById('survey');
+      var home   = document.getElementById('home');
+      var thanks = document.getElementById('thanks');
+      if (survey) survey.style.display = 'none';
+      if (thanks) thanks.style.display = 'none';
+      if (home)   home.style.display   = '';
+      // Clear all form fields silently
+      ['name','surname','phone','email','feedback'].forEach(function(id){
+        var el = document.getElementById(id);
+        if (el) el.value = '';
+      });
+      var popia = document.getElementById('popia');
+      var mk    = document.getElementById('mk');
+      if (popia) popia.checked = false;
+      if (mk)    mk.checked    = false;
+      // Clear selected answers
+      document.querySelectorAll('.opt.active').forEach(function(el){
+        el.classList.remove('active');
+      });
+      // Clear any saved form state
+      try{ sessionStorage.removeItem('cl_form_state'); }catch(_){}
+    }, SURVEY_TIMEOUT_MS);
+  }
+
+  // Reset timer on any user interaction
+  ['touchstart','click','keydown','scroll','input','change'].forEach(function(ev){
+    document.addEventListener(ev, resetSurveyTimer, { passive: true });
+  });
+
+  // Also reset when survey becomes visible (user starts a new review)
+  var _origStartSurvey = window.startSurvey;
+  window.startSurvey = function(){
+    if (_origStartSurvey) _origStartSurvey.apply(this, arguments);
+    resetSurveyTimer();
+  };
+
+  // Start checking on page load
+  resetSurveyTimer();
+})();
+
 /* ===== QUESTIONS ===== */
 const QUESTIONS=[
   {id:'Q1',text:'Speed of service'},
