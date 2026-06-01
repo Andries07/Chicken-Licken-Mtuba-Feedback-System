@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>QR Code Generator — Neuman Solutions</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0;}
+    body{font-family:Arial,Helvetica,sans-serif;background:#f4f6fb;color:#111;min-height:100vh;}
+    .header{background:#1a2e5a;color:#fff;padding:18px 24px;}
+    .header h1{font-size:20px;font-weight:900;margin:0 0 2px;}
+    .header p{font-size:13px;opacity:.75;margin:0;}
+    .container{max-width:980px;margin:0 auto;padding:28px 20px;}
+
+    /* Setup card */
+    .setup-card{background:#fff;border-radius:12px;border:0.5px solid #dde3f0;padding:22px 24px;margin-bottom:28px;}
+    .setup-card h2{font-size:15px;font-weight:700;color:#1a2e5a;margin:0 0 16px;}
+    .row{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:14px;}
+    .field{flex:1;min-width:200px;}
+    .field label{display:block;font-size:12px;font-weight:600;color:#555;margin-bottom:5px;text-transform:uppercase;letter-spacing:.04em;}
+    .field input{width:100%;border:1.5px solid #dde3f0;border-radius:8px;padding:9px 12px;font-size:14px;outline:none;transition:border-color .15s;}
+    .field input:focus{border-color:#1a2e5a;}
+    .tables-row{display:flex;align-items:center;gap:10px;margin-bottom:18px;}
+    .tables-row label{font-size:12px;font-weight:600;color:#555;text-transform:uppercase;letter-spacing:.04em;}
+    .tables-row input[type=number]{width:80px;border:1.5px solid #dde3f0;border-radius:8px;padding:8px 10px;font-size:14px;outline:none;}
+    .tables-row input[type=number]:focus{border-color:#1a2e5a;}
+    .gen-btn{background:#1a2e5a;color:#fff;border:none;border-radius:8px;padding:11px 28px;font-size:14px;font-weight:700;cursor:pointer;width:100%;}
+    .gen-btn:hover{background:#0f1e3d;}
+
+    /* Section headers */
+    .section-block{margin-bottom:32px;}
+    .section-title{font-size:13px;font-weight:700;color:#1a2e5a;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px;padding-bottom:8px;border-bottom:2px solid #1a2e5a;display:flex;justify-content:space-between;align-items:center;}
+    .section-desc{font-size:12px;color:#888;margin-bottom:14px;}
+
+    /* Tablet URL */
+    .tablet-section{background:#fff;border-radius:12px;border:0.5px solid #dde3f0;padding:18px 22px;margin-bottom:28px;}
+    .tablet-url-box{background:#f4f6fb;border-radius:8px;padding:11px 14px;font-family:monospace;font-size:12px;word-break:break-all;color:#1a2e5a;margin-bottom:10px;line-height:1.6;}
+    .copy-btn{background:transparent;border:1.5px solid #1a2e5a;color:#1a2e5a;border-radius:6px;padding:5px 14px;font-size:12px;font-weight:600;cursor:pointer;}
+    .copy-btn:hover{background:#1a2e5a;color:#fff;}
+
+    /* QR grid */
+    .qr-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(195px,1fr));gap:14px;}
+    .qr-card{background:#fff;border-radius:12px;border:0.5px solid #dde3f0;padding:16px 12px;text-align:center;}
+    .qr-card .lbl{font-size:13px;font-weight:700;color:#1a2e5a;margin-bottom:10px;}
+    .qr-card .sublbl{font-size:10px;color:#aaa;margin-bottom:8px;font-weight:400;}
+    .qr-card .qr-box{display:flex;justify-content:center;margin-bottom:8px;}
+    .qr-card .url-txt{font-size:9px;color:#aaa;word-break:break-all;margin-bottom:10px;line-height:1.4;}
+    .qr-card .print-btn{background:#1a2e5a;color:#fff;border:none;border-radius:6px;padding:6px 12px;font-size:11px;font-weight:600;cursor:pointer;}
+    .qr-card .print-btn:hover{background:#0f1e3d;}
+
+    /* Print all */
+    .print-all-row{display:flex;gap:10px;margin-bottom:32px;flex-wrap:wrap;}
+    .print-all-btn{background:#1a2e5a;color:#fff;border:none;border-radius:8px;padding:10px 22px;font-size:13px;font-weight:700;cursor:pointer;}
+    .print-all-btn:hover{background:#0f1e3d;}
+
+    #output{display:none;}
+
+    .history-card{background:#fff;border-radius:12px;border:0.5px solid #dde3f0;padding:18px 24px;margin-bottom:28px;}
+    .history-card h2{font-size:15px;font-weight:700;color:#1a2e5a;margin:0 0 12px;}
+    .history-list{display:flex;flex-wrap:wrap;gap:8px;}
+    .history-pill{background:#f4f6fb;border:1.5px solid #dde3f0;border-radius:99px;padding:6px 14px;font-size:12px;font-weight:600;color:#1a2e5a;cursor:pointer;display:flex;align-items:center;gap:8px;}
+    .history-pill:hover{background:#e8edf8;border-color:#1a2e5a;}
+    .del{color:#aaa;font-size:16px;line-height:1;margin-left:2px;}
+    .del:hover{color:#c00;}
+    .no-history{font-size:13px;color:#aaa;}
+    @media print{
+      .header,.setup-card,.print-all-row,.print-btn,.copy-btn,.gen-btn,.section-title button{display:none!important;}
+      body{background:#fff;}
+      .qr-grid{grid-template-columns:repeat(3,1fr)!important;}
+      .qr-card{break-inside:avoid;border:1px solid #ccc;}
+      #output{display:block!important;}
+    }
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <h1>QR Code Generator</h1>
+  <p>Neuman Solutions — Customer Feedback Platform</p>
+</div>
+
+<div class="container">
+
+  <!-- Setup form -->
+  <div class="setup-card">
+    <h2>Store Setup</h2>
+    <div class="row">
+      <div class="field">
+        <label>Store Name (display)</label>
+        <input type="text" id="storeName" placeholder="e.g. Chicken Licken Mtuba">
+      </div>
+      <div class="field">
+        <label>Store ID (used in URL)</label>
+        <input type="text" id="storeId" placeholder="e.g. CL-Mtuba">
+      </div>
+    </div>
+    <div class="tables-row">
+      <label>Number of tables:</label>
+      <input type="number" id="tableCount" value="10" min="1" max="50">
+    </div>
+    <button class="gen-btn" onclick="generate()">&#9654; Generate All QR Codes</button>
+  </div>
+
+  <div class="history-card" id="history-card">
+    <h2>Previously Generated Stores</h2>
+    <div class="history-list" id="history-list"><span class="no-history">No stores yet — generate your first one above.</span></div>
+  </div>
+
+  <div id="output">
+
+    <!-- Tablet URL -->
+    <div class="tablet-section" id="tablet-section">
+      <div class="section-title" style="border:none;padding:0;margin-bottom:10px;">
+        <span>&#128186; Tablet URL — Inside / Counter</span>
+      </div>
+      <p style="font-size:12px;color:#888;margin-bottom:10px;">Bookmark this URL in Chrome on the tablet and set to fullscreen / kiosk mode.</p>
+      <div id="tablet-url" class="tablet-url-box"></div>
+      <button class="copy-btn" onclick="copyTablet()">Copy URL</button>
+    </div>
+
+    <!-- INSIDE QR -->
+    <div class="section-block" id="inside-section">
+      <div class="section-title">
+        <span>&#128247; Inside QR Codes — Counter</span>
+        <button class="copy-btn" onclick="printSection('inside-grid')">Print Inside QRs</button>
+      </div>
+      <p class="section-desc">Place at the counter / till point inside the store. One QR, customers scan after paying.</p>
+      <div class="qr-grid" id="inside-grid"></div>
+    </div>
+
+    <!-- OUTSIDE QR -->
+    <div class="section-block" id="outside-section">
+      <div class="section-title">
+        <span>&#127968; Outside QR Codes — Entrance & Drive-Through</span>
+        <button class="copy-btn" onclick="printSection('outside-grid')">Print Outside QRs</button>
+      </div>
+      <p class="section-desc">Place at the entrance, exit, or drive-through window. Customers scan as they leave.</p>
+      <div class="qr-grid" id="outside-grid"></div>
+    </div>
+
+    <!-- TABLE QR -->
+    <div class="section-block" id="table-section">
+      <div class="section-title">
+        <span>&#127862; Table QR Codes</span>
+        <button class="copy-btn" onclick="printSection('table-grid')">Print Table QRs</button>
+      </div>
+      <p class="section-desc">One QR per table. Place in a small stand on each table. Each has a unique Table number so you know exactly where feedback came from.</p>
+      <div class="qr-grid" id="table-grid"></div>
+    </div>
+
+    <div class="print-all-row">
+      <button class="print-all-btn" onclick="window.print()">&#128424; Print ALL QR Codes</button>
+    </div>
+
+  </div><!-- /output -->
+</div>
+
+<script>
+const BASE = 'https://feedback.neumansolutions.co.za';
+
+// The three URL types — exactly as requested
+// INSIDE:  Counter QR (same location as tablet, different deviceId)
+// OUTSIDE: Entrance + Drive-Through
+// TABLES:  One per table with unique table number
+
+function saveHistory(name, sid, tableCount){
+  try{
+    const key='ns_qr_history';
+    let h=JSON.parse(localStorage.getItem(key)||'[]');
+    h=h.filter(x=>x.sid!==sid);
+    h.unshift({name,sid,tableCount});
+    if(h.length>20)h=h.slice(0,20);
+    localStorage.setItem(key,JSON.stringify(h));
+    renderHistory();
+  }catch(_){}
+}
+
+function renderHistory(){
+  try{
+    const key='ns_qr_history';
+    const h=JSON.parse(localStorage.getItem(key)||'[]');
+    const list=document.getElementById('history-list');
+    if(!list)return;
+    if(!h.length){list.innerHTML='<span class="no-history">No stores yet — generate your first one above.</span>';return;}
+    list.innerHTML=h.map((x,i)=>`<div class="history-pill" onclick="loadStore(${i})"><span>${x.name} <span style="opacity:.5;font-weight:400;">(${x.sid})</span></span><span class="del" onclick="event.stopPropagation();deleteHistory(${i})" title="Remove">&#215;</span></div>`).join('');
+  }catch(_){}
+}
+
+function loadStore(idx){
+  try{
+    const h=JSON.parse(localStorage.getItem('ns_qr_history')||'[]');
+    const x=h[idx];if(!x)return;
+    document.getElementById('storeName').value=x.name;
+    document.getElementById('storeId').value=x.sid;
+    document.getElementById('tableCount').value=x.tableCount||10;
+    generate();
+  }catch(_){}
+}
+
+function deleteHistory(idx){
+  try{
+    const key='ns_qr_history';
+    let h=JSON.parse(localStorage.getItem(key)||'[]');
+    h.splice(idx,1);
+    localStorage.setItem(key,JSON.stringify(h));
+    renderHistory();
+  }catch(_){}
+}
+
+function generate(){
+  const name       = document.getElementById('storeName').value.trim();
+  const sid        = document.getElementById('storeId').value.trim();
+  const tableCount = parseInt(document.getElementById('tableCount').value) || 10;
+
+  if (!name || !sid){ alert('Please enter both the Store Name and Store ID.'); return; }
+
+  // Clear previous output
+  ['inside-grid','outside-grid','table-grid'].forEach(id => document.getElementById(id).innerHTML = '');
+
+  // ── TABLET URL ──────────────────────────────────────────────────
+  const tabletUrl = url(sid, 'TABLET-01', 'Counter Tablet', 'tablet');
+  document.getElementById('tablet-url').textContent = tabletUrl;
+
+  // ── INSIDE QR codes ─────────────────────────────────────────────
+  // Only the counter QR for inside (same spot as the tablet but for customers without the tablet)
+  const insideQRs = [
+    { label: 'Counter QR', sub: 'Stick next to the till / tablet', deviceId: 'QR-COUNTER', device: 'Counter', src: 'qr-in' },
+  ];
+  insideQRs.forEach(q => addCard('inside-grid', q.label, q.sub, url(sid, q.deviceId, q.device, q.src), q.deviceId));
+
+  // ── OUTSIDE QR codes ────────────────────────────────────────────
+  const outsideQRs = [
+    { label: 'Entrance',      sub: 'Main entrance door',          deviceId: 'QR-ENTRANCE',   device: 'Entrance',      src: 'qr-in'    },
+    { label: 'Exit',          sub: 'Exit door',                   deviceId: 'QR-EXIT',       device: 'Exit',          src: 'qr-in'    },
+    { label: 'Drive-Through', sub: 'Drive-through window',        deviceId: 'QR-DRIVE',      device: 'Drive-Through', src: 'qr-drive' },
+  ];
+  outsideQRs.forEach(q => addCard('outside-grid', q.label, q.sub, url(sid, q.deviceId, q.device, q.src), q.deviceId));
+
+  // ── TABLE QR codes ──────────────────────────────────────────────
+  for (let i = 1; i <= tableCount; i++){
+    const num = String(i).padStart(2,'0');
+    addCard(
+      'table-grid',
+      `Table ${num}`,
+      `Place on Table ${num}`,
+      url(sid, `QR-TABLE-${num}`, `Table ${num}`, 'qr-in'),
+      `QR-TABLE-${num}`
+    );
+  }
+
+  document.getElementById('output').style.display = 'block';
+  document.getElementById('output').scrollIntoView({behavior:'smooth'});
+}
+
+function url(storeId, deviceId, device, src){
+  return `${BASE}/?store=${enc(storeId)}&deviceId=${enc(deviceId)}&device=${enc(device)}&src=${enc(src)}`;
+}
+function enc(s){ return encodeURIComponent(s).replace(/%20/g,'+'); }
+
+function addCard(gridId, label, sub, fullUrl, deviceId){
+  const safeId = 'qr-' + deviceId.replace(/[^a-zA-Z0-9]/g,'-');
+  const card = document.createElement('div');
+  card.className = 'qr-card';
+  card.innerHTML = `
+    <div class="lbl">${label}</div>
+    <div class="sublbl">${sub}</div>
+    <div class="qr-box" id="${safeId}"></div>
+    <div class="url-txt">${fullUrl}</div>
+    <button class="print-btn" onclick="printOne('${safeId}','${label.replace(/'/g,"\\'")}','${sub.replace(/'/g,"\\'")}')">Print</button>
+  `;
+  document.getElementById(gridId).appendChild(card);
+  setTimeout(() => {
+    new QRCode(document.getElementById(safeId), {
+      text: fullUrl, width: 150, height: 150,
+      colorDark: '#000000', colorLight: '#ffffff',
+      correctLevel: QRCode.CorrectLevel.M
+    });
+  }, 60);
+}
+
+function printOne(safeId, label, sub){
+  const qrEl = document.getElementById(safeId);
+  const img   = qrEl ? qrEl.querySelector('img,canvas') : null;
+  if (!img){ alert('QR not ready yet — wait a second and try again.'); return; }
+  const src = img.tagName === 'CANVAS' ? img.toDataURL() : img.src;
+  const w = window.open('','_blank','width=420,height=560');
+  w.document.write(`<!DOCTYPE html><html><body style="text-align:center;font-family:Arial;padding:28px;">
+    <h2 style="color:#1a2e5a;margin-bottom:4px;font-size:18px;">${label}</h2>
+    <p style="color:#888;font-size:12px;margin-bottom:16px;">${sub}</p>
+    <img src="${src}" style="width:220px;height:220px;display:block;margin:0 auto;">
+    <p style="font-size:11px;color:#aaa;margin-top:14px;">feedback.neumansolutions.co.za</p>
+    <p style="font-size:10px;color:#ccc;margin-top:4px;">Scan to rate your experience</p>
+    <script>window.onload=function(){window.print();}<\/script>
+  </body></html>`);
+  w.document.close();
+}
+
+function printSection(gridId){
+  const grid = document.getElementById(gridId);
+  if (!grid) return;
+  const cards = grid.querySelectorAll('.qr-card');
+  let html = `<!DOCTYPE html><html><head><style>
+    body{font-family:Arial;background:#fff;}
+    .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;padding:20px;}
+    .card{text-align:center;border:1px solid #ddd;border-radius:8px;padding:14px;break-inside:avoid;}
+    .lbl{font-size:13px;font-weight:700;color:#1a2e5a;margin-bottom:4px;}
+    .sub{font-size:10px;color:#aaa;margin-bottom:10px;}
+    img{width:160px;height:160px;}
+    .foot{font-size:9px;color:#ccc;margin-top:8px;}
+  </style></head><body><div class="grid">`;
+  cards.forEach(card => {
+    const lbl  = card.querySelector('.lbl').textContent;
+    const sub  = card.querySelector('.sublbl').textContent;
+    const qrEl = card.querySelector('.qr-box img,.qr-box canvas');
+    const src  = qrEl ? (qrEl.tagName==='CANVAS' ? qrEl.toDataURL() : qrEl.src) : '';
+    html += `<div class="card"><div class="lbl">${lbl}</div><div class="sub">${sub}</div>
+      <img src="${src}"><div class="foot">feedback.neumansolutions.co.za</div></div>`;
+  });
+  html += `</div><script>window.onload=function(){window.print();}<\/script></body></html>`;
+  const w = window.open('','_blank');
+  w.document.write(html);
+  w.document.close();
+}
+
+function copyTablet(){
+  const urlText = document.getElementById('tablet-url').textContent;
+  navigator.clipboard.writeText(urlText)
+    .then(() => alert('Tablet URL copied!'))
+    .catch(() => prompt('Copy this URL:', urlText));
+}
+
+// Load history on page start
+renderHistory();
+renderHistory();
+</script>
+
+</body>
+</html>
