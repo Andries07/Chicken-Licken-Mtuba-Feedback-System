@@ -1,0 +1,4 @@
+{
+  "_comment": "Set a storeId to false to immediately suspend that store's feedback form. Set to true to reactivate.",
+  "CL-Mtuba": true
+}
