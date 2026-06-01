@@ -465,15 +465,15 @@ function restoreFormState(){
     document.addEventListener(ev, resetSurveyTimer, { passive: true });
   });
 
-  // Also reset when survey becomes visible (user starts a new review)
-  var _origStartSurvey = window.startSurvey;
-  window.startSurvey = function(){
-    if (_origStartSurvey) _origStartSurvey.apply(this, arguments);
+  // Wrap startSurvey AFTER it is defined — defer to DOMContentLoaded
+  document.addEventListener('DOMContentLoaded', function(){
+    var _origStartSurvey = window.startSurvey;
+    window.startSurvey = function(){
+      if (typeof _origStartSurvey === 'function') _origStartSurvey.apply(this, arguments);
+      resetSurveyTimer();
+    };
     resetSurveyTimer();
-  };
-
-  // Start checking on page load
-  resetSurveyTimer();
+  });
 })();
 
 /* ===== QUESTIONS ===== */
