@@ -598,8 +598,7 @@
     var cd  = document.getElementById('countdown');
 
     function goBack(){
-      // Always go back — works whether opened in same tab or new tab
-      // If no history, fall back to index.html
+      // Back BUTTON: return to survey with form state intact
       if (window.history.length > 1) {
         window.history.back();
       } else {
@@ -607,14 +606,19 @@
       }
     }
 
-    // Kick off countdown
+    function goHome(){
+      // 120s TIMEOUT: go to home screen — clears the form for next customer
+      window.location.href = 'index.html';
+    }
+
+    // Kick off countdown — timeout always goes to home screen
     var interval = setInterval(function(){
       remaining--;
       cd.textContent = remaining;
       bar.style.width = Math.round((remaining / SECONDS) * 100) + '%';
       if (remaining <= 0) {
         clearInterval(interval);
-        goBack();
+        goHome();
       }
     }, 1000);
 
