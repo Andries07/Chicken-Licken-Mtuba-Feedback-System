@@ -127,11 +127,49 @@
   }
 </style>
 
-<!-- minimal hotfix (no visual  to your design) -->
+<!-- iOS Safari layout fixes -->
 <style>
-  html, body { height:100%; min-height:100%; }
-  .home{ min-height:100svh !important; }
-  .hero{ min-height:100svh !important; height:auto !important; }
+  /* Lock body/html — prevents overscroll and bouncing on iOS */
+  html, body {
+    height: 100%;
+    max-height: 100%;
+    overflow: hidden;
+    position: fixed;
+    width: 100%;
+  }
+
+  /* Home screen — perfectly centred on all devices including iOS */
+  .home {
+    position: fixed !important;
+    inset: 0 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    width: 100% !important;
+    height: 100% !important;
+    padding: 20px !important;
+    box-sizing: border-box !important;
+    overflow: hidden !important;
+  }
+
+  /* Card itself — centred, no drift */
+  .home .card {
+    width: 100% !important;
+    max-width: 480px !important;
+    margin: 0 auto !important;
+    box-sizing: border-box !important;
+  }
+
+  /* Survey/hero — scrollable internally but body stays locked */
+  .hero {
+    position: fixed !important;
+    inset: 0 !important;
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+    height: 100% !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+  }
 </style>
 </head>
 <body>
@@ -604,19 +642,45 @@ document.addEventListener('DOMContentLoaded', ()=>{
 /* ===== SUBMIT ===== */
 let inFlight = false;
 function within24h(ts){return (Date.now() - Number(ts)) < 24*60*60*1000;}
+
+/* Cookie helpers — survive QR scan sessions on iOS Safari unlike localStorage */
+function getCookie_(name){
+  try{var m=document.cookie.match('(^|;)\s*'+name+'\s*=\s*([^;]+)');return m?decodeURIComponent(m[2]):null;}catch(_){return null;}
+}
+function setCookie_(name,value,hours){
+  try{var exp=new Date(Date.now()+hours*3600*1000).toUTCString();
+  document.cookie=name+'='+encodeURIComponent(value)+';expires='+exp+';path=/;SameSite=Lax';}catch(_){}
+}
+
 function dupLocalBlockIfAny(){
   const phone=val('phone'); const email=(val('email')||'').toLowerCase();
   if(!phone && !email) return false;
-  const kP = phone ? `cl_last_phone_${phone}` : null;
-  const kE = email ? `cl_last_email_${email}` : null;
-  if(kP && localStorage.getItem(kP) && within24h(localStorage.getItem(kP))) return true;
-  if(kE && localStorage.getItem(kE) && within24h(localStorage.getItem(kE))) return true;
+  const store = CFG.storeId || '';
+  // Check cookie (works on iOS QR scans) AND localStorage (fallback)
+  if(phone){
+    const k='cl_ph_'+store+'_'+phone;
+    const t=getCookie_(k)||localStorage.getItem(k);
+    if(t && within24h(t)) return true;
+  }
+  if(email){
+    const k='cl_em_'+store+'_'+email;
+    const t=getCookie_(k)||localStorage.getItem(k);
+    if(t && within24h(t)) return true;
+  }
   return false;
 }
 function dupLocalMark(){
   const phone=val('phone'); const email=(val('email')||'').toLowerCase();
-  if(phone) localStorage.setItem(`cl_last_phone_${phone}`, String(Date.now()));
-  if(email) localStorage.setItem(`cl_last_email_${email}`, String(Date.now()));
+  const store = CFG.storeId || '';
+  const ts = String(Date.now());
+  if(phone){
+    const k='cl_ph_'+store+'_'+phone;
+    setCookie_(k,ts,24); try{localStorage.setItem(k,ts);}catch(_){}
+  }
+  if(email){
+    const k='cl_em_'+store+'_'+email;
+    setCookie_(k,ts,24); try{localStorage.setItem(k,ts);}catch(_){}
+  }
 }
 
 function fireAndForgetSend(bodyStr){
@@ -756,20 +820,20 @@ function toast(msg){const s=document.getElementById('statusTxt');if(!s)return;s.
     CFG.deviceId    = ((mode === 'qr-in') ? 'QRIN-' : 'QRDRIVE-') + (slug || (qp('store')||'unknown'));
 
     try{
-      var uidKey = 'cl_qr_uid_' + mode;
-      var uid = localStorage.getItem(uidKey);
-      if(!uid){ uid = gen(); localStorage.setItem(uidKey, uid); }
+      // Cookies persist across QR scan sessions on iOS Safari — localStorage does not
+      var uidKey = 'cl_qr_uid_' + CFG.storeId + '_' + mode;
+      var uid = getCookie_(uidKey);
+      if(!uid){ uid = gen(); setCookie_(uidKey, uid, 24*30); } // 30-day uid cookie
       window.CL_QR_ctx.uid = uid;
 
       window.CL_QR_canSubmit = function(){
-        var key = 'cl_qr_last_' + mode + '_' + uid;
-        var last = parseInt(localStorage.getItem(key)||'0',10);
-        if (last && (Date.now()-last) < 24*60*60*1000) return false;
-        return true;
+        // Block key: store + mode, expires in 24h after submission
+        var doneKey = 'cl_qr_done_' + CFG.storeId + '_' + mode;
+        return !getCookie_(doneKey);
       };
       window.CL_QR_markSubmitted = function(){
-        var key = 'cl_qr_last_' + mode + '_' + uid;
-        localStorage.setItem(key, String(Date.now()));
+        var doneKey = 'cl_qr_done_' + CFG.storeId + '_' + mode;
+        setCookie_(doneKey, '1', 24); // 24-hour block cookie
       };
     }catch(_){}
   }else{
@@ -859,9 +923,25 @@ window.startSurvey = window.startSurvey || function(){
 };
 </script>
 
-<!-- === HEARTBEAT (non-blocking; no CORS preflight) === -->
+<!-- === HEARTBEAT — tablets only, not QR scans === -->
 <script>
 (function(){
+  // Only send heartbeats from dedicated tablets — never from customer QR scans
+  // A device is a tablet if its deviceId does NOT start with QR- and src param is not qr-in/qr-drive
+  function isTablet(){
+    try{
+      const deviceId = (CFG && CFG.deviceId) || '';
+      const src = (new URL(location.href).searchParams.get('src') || '').toLowerCase();
+      // QR devices have IDs starting with QR- or src param of qr-in/qr-drive
+      if (/^QR-/i.test(deviceId)) return false;
+      if (src === 'qr-in' || src === 'qr-drive') return false;
+      return true;
+    }catch(_){ return false; }
+  }
+
+  // Exit immediately if this is a QR scan — no heartbeat, no tracking
+  if (!isTablet()) return;
+
   const HEARTBEAT_MS = 120000; // every 2 minutes
 
   function endpoint(){ return (CFG && CFG.apiUrl) || null; }
