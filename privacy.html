@@ -207,9 +207,9 @@
       font-weight: 900; font-size: 13px; cursor: pointer; white-space: nowrap; flex-shrink: 0;
     }
     .return-bar .back-btn:hover { background: #0f1e3d; }
-    .progress-track { position: fixed; bottom: 48px; left: 0; right: 0; height: 3px; background: #333; z-index: 100; }
-    .progress-track .progress-fill { height: 3px; background: #1a2e5a; width: 100%; transition: width 1s linear; }
-    body { padding-bottom: 64px; }
+    .progress-track { display: none; }
+    .progress-track .progress-fill { display: none; }
+
   </style>
 </head>
 <body>
@@ -584,21 +584,17 @@
   </div>
 
 
-  <!-- ── AUTO-RETURN BAR ── -->
-  <div class="progress-track"><div class="progress-fill" id="timerBar"></div></div>
-  <div class="return-bar">
-    <div class="msg">Returning to survey in <span id="countdown">120</span>s</div>
-    <button class="back-btn" onclick="goBack()">&#8592; Back to Survey</button>
+  <!-- Back button only — no visible timer shown to customer -->
+  <div style="position:fixed;bottom:0;left:0;right:0;background:#1a2e5a;padding:10px 20px;text-align:center;z-index:100;">
+    <button onclick="goBack()" style="background:#fff;color:#1a2e5a;border:none;border-radius:8px;padding:9px 24px;font-size:14px;font-weight:700;cursor:pointer;">&#8592; Back to Survey</button>
   </div>
 
   <script>
     var SECONDS = 120;
     var remaining = SECONDS;
-    var bar = document.getElementById('timerBar');
-    var cd  = document.getElementById('countdown');
 
     function goBack(){
-      // Back BUTTON: return to survey with form state intact
+      // Back button: return to survey with form state intact
       if (window.history.length > 1) {
         window.history.back();
       } else {
@@ -607,27 +603,23 @@
     }
 
     function goHome(){
-      // 120s TIMEOUT: go to home screen — clears the form for next customer
+      // Silent 120s timeout: go to home screen
       window.location.href = 'index.html';
     }
 
-    // Kick off countdown — timeout always goes to home screen
+    // Silent countdown — no visible timer shown to customer
     var interval = setInterval(function(){
       remaining--;
-      cd.textContent = remaining;
-      bar.style.width = Math.round((remaining / SECONDS) * 100) + '%';
       if (remaining <= 0) {
         clearInterval(interval);
         goHome();
       }
     }, 1000);
 
-    // Reset timer if user scrolls / interacts — they're actively reading
+    // Reset timer if user scrolls or interacts — they are actively reading
     ['scroll','click','keydown','touchstart'].forEach(function(ev){
       document.addEventListener(ev, function(){
         remaining = SECONDS;
-        cd.textContent = remaining;
-        bar.style.width = '100%';
       }, { passive: true });
     });
   </script>
