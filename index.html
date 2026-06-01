@@ -465,14 +465,13 @@ function restoreFormState(){
     document.addEventListener(ev, resetSurveyTimer, { passive: true });
   });
 
-  // Wrap startSurvey AFTER it is defined — defer to DOMContentLoaded
+  // Reset survey timer whenever user starts a review — hooked via load event
+  // (avoids overwriting startSurvey which causes button to break)
   document.addEventListener('DOMContentLoaded', function(){
-    var _origStartSurvey = window.startSurvey;
-    window.startSurvey = function(){
-      if (typeof _origStartSurvey === 'function') _origStartSurvey.apply(this, arguments);
-      resetSurveyTimer();
-    };
     resetSurveyTimer();
+    // Hook into the actual startBtn click directly instead of wrapping startSurvey
+    var btn = document.getElementById('startBtn');
+    if (btn) btn.addEventListener('click', function(){ resetSurveyTimer(); }, { passive: true });
   });
 })();
 
@@ -900,11 +899,6 @@ function toast(msg){const s=document.getElementById('statusTxt');if(!s)return;s.
     }catch(e){ console.error('Render safeguard error:', e); }
   }
   window.addEventListener('load', safeRenderNow);
-  if (typeof window.startSurvey === 'function' && !window.startSurvey._patched){
-    var _orig = window.startSurvey;
-    window.startSurvey = function(){ _orig.apply(this, arguments); safeRenderNow(); };
-    window.startSurvey._patched = true;
-  }
 })();
 </script>
 
