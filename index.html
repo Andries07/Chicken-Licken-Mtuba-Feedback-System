@@ -265,12 +265,10 @@ function getDeviceLabel(){
 }
 
 
-/* ===== CONFIG ===== */
-/* NOTE: URL params always win. Hardcoded fallbacks are for this specific tablet. */
+/* ===== URL PARAMS → LOCALSTORAGE (always runs first) ===== */
 (function(){
   try{
     const u = new URL(location.href);
-    // Always write URL params to localStorage so they survive page reloads
     const sp = u.searchParams;
     const storeP  = sp.get('store') || sp.get('Store') || sp.get('storeId');
     const deviceP = sp.get('deviceId') || sp.get('did') || sp.get('DEVICEID');
@@ -281,13 +279,38 @@ function getDeviceLabel(){
   }catch(_){}
 })();
 
+/* ===== CONFIG ===== */
 const CFG = {
-  apiUrl: "https://script.google.com/macros/s/AKfycbwpz-GT09gtKwks3B_Tcse2pE9Gqm7MEC9cPcB6ct8xFnVSrXB60lh4mHNzUEPUguMlXQ/exec",
-  token:  "CL-Mtuba-2025-Secure-Token-X9k",
+  apiUrl:      "https://script.google.com/macros/s/AKfycbyeoiTY6LumCkZLYMCkJdKoRZMqAWAUgSJZi99L9df55Yan-8a_mhtd6Y7KFV4r3Ax6bw/exec",
+  token:       "CL-Mtuba-2025-Secure-Token-X9k",
   storeId:     (function(){ try{ return localStorage.getItem('cl_storeId')||'CL-Mtuba'; }catch(_){ return 'CL-Mtuba'; } })(),
   deviceId:    (function(){ try{ return localStorage.getItem('cl_deviceId')||'TABLET-01'; }catch(_){ return 'TABLET-01'; } })(),
   deviceLabel: (function(){ try{ return localStorage.getItem('cl_deviceLabel')||'Front Counter'; }catch(_){ return 'Front Counter'; } })()
 };
+
+
+/* ===== SUSPENSION CHECK ===== */
+(function(){
+  try{
+    const storeId = CFG.storeId;
+    if (!storeId || storeId === 'UNKNOWN') return;
+    fetch('status.json?v=' + Date.now())
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        if (!data) return;
+        const active = data[storeId] !== false && data['ALL'] !== false;
+        if (!active) showSuspended_();
+      })
+      .catch(() => {});
+  }catch(_){}
+})();
+
+function showSuspended_(){
+  const overlay = document.createElement('div');
+  overlay.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:#1a2e5a;display:flex;align-items:center;justify-content:center;z-index:99999;padding:24px;font-family:Arial,Helvetica,sans-serif;';
+  overlay.innerHTML = '<div style="max-width:420px;width:100%;text-align:center;"><div style="font-size:48px;margin-bottom:16px;">⏸</div><h2 style="color:#fff;font-size:22px;font-weight:900;margin:0 0 12px;">Service Temporarily Unavailable</h2><p style="color:rgba(255,255,255,0.75);font-size:14px;line-height:1.6;margin:0 0 24px;">This feedback terminal has been suspended.<br>Please contact your store manager.</p><div style="background:rgba(255,255,255,0.1);border-radius:10px;padding:14px 18px;"><p style="color:rgba(255,255,255,0.5);font-size:12px;margin:0;">Neuman Solutions &nbsp;|&nbsp; neumansolutions@gmail.com</p></div></div>';
+  document.body.appendChild(overlay);
+}
 
 /* ===== QUESTIONS ===== */
 const QUESTIONS=[
@@ -587,7 +610,6 @@ function toast(msg){const s=document.getElementById('statusTxt');if(!s)return;s.
     "bronkhorstspruit":"CL-Bronkhorstspruit",
     "ok":"CL-Ok",
     "jumbo":"CL-Jumbo",
-     "mtuba":"CL-Mtuba",
   };
 
   var slug  = (qp('s')||'').toLowerCase();
