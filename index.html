@@ -127,49 +127,11 @@
   }
 </style>
 
-<!-- iOS Safari layout fixes -->
+<!-- minimal hotfix (no visual  to your design) -->
 <style>
-  /* Lock body/html — prevents overscroll and bouncing on iOS */
-  html, body {
-    height: 100%;
-    max-height: 100%;
-    overflow: hidden;
-    position: fixed;
-    width: 100%;
-  }
-
-  /* Home screen — perfectly centred on all devices including iOS */
-  .home {
-    position: fixed !important;
-    inset: 0 !important;
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    width: 100% !important;
-    height: 100% !important;
-    padding: 20px !important;
-    box-sizing: border-box !important;
-    overflow: hidden !important;
-  }
-
-  /* Card itself — centred, no drift */
-  .home .card {
-    width: 100% !important;
-    max-width: 480px !important;
-    margin: 0 auto !important;
-    box-sizing: border-box !important;
-  }
-
-  /* Survey/hero — scrollable internally but body stays locked */
-  .hero {
-    position: fixed !important;
-    inset: 0 !important;
-    overflow-y: auto !important;
-    -webkit-overflow-scrolling: touch !important;
-    height: 100% !important;
-    width: 100% !important;
-    box-sizing: border-box !important;
-  }
+  html, body { height:100%; min-height:100%; }
+  .home{ min-height:100svh !important; }
+  .hero{ min-height:100svh !important; height:auto !important; }
 </style>
 </head>
 <body>
@@ -218,7 +180,7 @@
           <input type="checkbox" id="popia" style="margin-top:3px">
           <small>
             I consent to processing my personal info for service quality in line with POPIA and I allow Chicken Licken to contact me regarding this feedback.
-            <a href="privacy.html" onclick="saveFormState()" style="color:#ff6900;text-decoration:underline;white-space:nowrap;">Privacy Policy</a>
+            <a href="privacy.html" target="_blank" rel="noopener" style="color:#ff6900;text-decoration:underline;white-space:nowrap;">Privacy Policy</a>
           </small>
         </label>
         <label style="display:grid;grid-template-columns:auto 1fr;gap:8px;align-items:start;margin-top:4px">
@@ -303,177 +265,25 @@ function getDeviceLabel(){
 }
 
 
-/* ===== URL PARAMS → LOCALSTORAGE (always runs first) ===== */
+/* ===== CLEAR STALE STORE/DEVICE IF URL PARAMS PRESENT ===== */
 (function(){
   try{
     const u = new URL(location.href);
-    const sp = u.searchParams;
-    const storeP  = sp.get('store') || sp.get('Store') || sp.get('storeId');
-    const deviceP = sp.get('deviceId') || sp.get('did') || sp.get('DEVICEID');
-    const labelP  = sp.get('device');
-    if(storeP)  localStorage.setItem('cl_storeId',    storeP.replace(/\+/g,' ').trim());
-    if(deviceP) localStorage.setItem('cl_deviceId',   deviceP.replace(/\+/g,' ').trim());
-    if(labelP)  localStorage.setItem('cl_deviceLabel',labelP.replace(/\+/g,' ').trim());
+    const storeParam = u.searchParams.get('store') || u.searchParams.get('Store') || u.searchParams.get('storeId');
+    const deviceParam = u.searchParams.get('deviceId') || u.searchParams.get('device') || u.searchParams.get('did');
+    if(storeParam){ localStorage.setItem('cl_storeId', storeParam.replace(/\+/g,' ').trim()); }
+    if(deviceParam){ localStorage.setItem('cl_deviceId', deviceParam.replace(/\+/g,' ').trim()); }
   }catch(_){}
 })();
 
 /* ===== CONFIG ===== */
 const CFG = {
-  apiUrl:      "https://script.google.com/macros/s/AKfycbwpz-GT09gtKwks3B_Tcse2pE9Gqm7MEC9cPcB6ct8xFnVSrXB60lh4mHNzUEPUguMlXQ/exec",
-  token:       "CL-Mtuba-2025-Secure-Token-X9k",
-  storeId:     (function(){ try{ return localStorage.getItem('cl_storeId')||'CL-Mtuba'; }catch(_){ return 'CL-Mtuba'; } })(),
-  deviceId:    (function(){ try{ return localStorage.getItem('cl_deviceId')||'TABLET-01'; }catch(_){ return 'TABLET-01'; } })(),
-  deviceLabel: (function(){ try{ return localStorage.getItem('cl_deviceLabel')||'Front Counter'; }catch(_){ return 'Front Counter'; } })()
+  apiUrl: "https://script.google.com/macros/s/AKfycbwpz-GT09gtKwks3B_Tcse2pE9Gqm7MEC9cPcB6ct8xFnVSrXB60lh4mHNzUEPUguMlXQ/exec",
+  token:  "CL-Mtuba-2025-Secure-Token-X9k",
+  storeId:     getStoreId(),
+  deviceLabel: getDeviceLabel(),
+  deviceId:    getDeviceId()
 };
-
-
-/* ===== SUSPENSION CHECK ===== */
-(function(){
-  try{
-    const storeId = CFG.storeId;
-    if (!storeId || storeId === 'UNKNOWN') return;
-    fetch('status.json?v=' + Date.now())
-      .then(r => r.ok ? r.json() : null)
-      .then(data => {
-        if (!data) return;
-        const active = data[storeId] !== false && data['ALL'] !== false;
-        if (!active) showSuspended_();
-      })
-      .catch(() => {});
-  }catch(_){}
-})();
-
-function showSuspended_(){
-  const overlay = document.createElement('div');
-  overlay.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:#1a2e5a;display:flex;align-items:center;justify-content:center;z-index:99999;padding:24px;font-family:Arial,Helvetica,sans-serif;';
-  overlay.innerHTML = '<div style="max-width:420px;width:100%;text-align:center;"><div style="font-size:48px;margin-bottom:16px;">⏸</div><h2 style="color:#fff;font-size:22px;font-weight:900;margin:0 0 12px;">Service Temporarily Unavailable</h2><p style="color:rgba(255,255,255,0.75);font-size:14px;line-height:1.6;margin:0 0 24px;">This feedback terminal has been suspended.<br>Please contact your store manager.</p><div style="background:rgba(255,255,255,0.1);border-radius:10px;padding:14px 18px;"><p style="color:rgba(255,255,255,0.5);font-size:12px;margin:0;">Neuman Solutions &nbsp;|&nbsp; neumansolutions@gmail.com</p></div></div>';
-  document.body.appendChild(overlay);
-}
-
-
-/* ===== FORM STATE — save/restore when visiting privacy policy ===== */
-function saveFormState(){
-  try{
-    // Save all customer field values
-    const state = {
-      name:     document.getElementById('name')    ? document.getElementById('name').value    : '',
-      surname:  document.getElementById('surname') ? document.getElementById('surname').value : '',
-      phone:    document.getElementById('phone')   ? document.getElementById('phone').value   : '',
-      email:    document.getElementById('email')   ? document.getElementById('email').value   : '',
-      feedback: document.getElementById('feedback')? document.getElementById('feedback').value: '',
-      popia:    document.getElementById('popia')   ? document.getElementById('popia').checked : false,
-      mk:       document.getElementById('mk')      ? document.getElementById('mk').checked    : false,
-      // Save which answers were selected (the active options)
-      answers:  Array.from(document.querySelectorAll('.opt.active')).map(el => ({
-        qid: el.closest('[data-qid]') ? el.closest('[data-qid]').dataset.qid : '',
-        val: el.dataset.val || el.textContent.trim()
-      })),
-      // Save whether survey was in progress
-      surveyOpen: document.getElementById('survey') ?
-        document.getElementById('survey').style.display !== 'none' : false
-    };
-    sessionStorage.setItem('cl_form_state', JSON.stringify(state));
-  }catch(_){}
-}
-
-function restoreFormState(){
-  try{
-    const raw = sessionStorage.getItem('cl_form_state');
-    if(!raw) return;
-    const state = JSON.parse(raw);
-    sessionStorage.removeItem('cl_form_state'); // clear after restoring
-
-    // If survey was open, show it
-    if(state.surveyOpen){
-      const survey = document.getElementById('survey');
-      const home   = document.getElementById('home');
-      if(survey) survey.style.display = '';
-      if(home)   home.style.display   = 'none';
-    }
-
-    // Restore field values after a short delay to let the DOM settle
-    setTimeout(function(){
-      if(state.name     && document.getElementById('name'))     document.getElementById('name').value     = state.name;
-      if(state.surname  && document.getElementById('surname'))  document.getElementById('surname').value  = state.surname;
-      if(state.phone    && document.getElementById('phone'))    document.getElementById('phone').value    = state.phone;
-      if(state.email    && document.getElementById('email'))    document.getElementById('email').value    = state.email;
-      if(state.feedback && document.getElementById('feedback')) document.getElementById('feedback').value = state.feedback;
-      if(state.popia    && document.getElementById('popia'))    document.getElementById('popia').checked  = state.popia;
-      if(state.mk       && document.getElementById('mk'))       document.getElementById('mk').checked     = state.mk;
-
-      // Restore selected answers
-      if(state.answers && state.answers.length){
-        state.answers.forEach(function(a){
-          if(!a.qid) return;
-          const row = document.querySelector('[data-qid="'+a.qid+'"]');
-          if(!row) return;
-          const opts = row.querySelectorAll('.opt');
-          opts.forEach(function(opt){
-            if((opt.dataset.val && opt.dataset.val === a.val) ||
-               opt.textContent.trim() === a.val){
-              opt.classList.add('active');
-            }
-          });
-        });
-      }
-    }, 100);
-  }catch(_){}
-}
-
-// Restore form state on page load if returning from privacy page
-(function(){ restoreFormState(); })();
-
-
-/* ===== SURVEY INACTIVITY TIMER — 4 minutes, silent, resets on interaction ===== */
-(function(){
-  var SURVEY_TIMEOUT_MS = 4 * 60 * 1000; // 4 minutes
-  var surveyTimer = null;
-
-  function resetSurveyTimer(){
-    clearTimeout(surveyTimer);
-    // Only run timer when survey screen is visible
-    var survey = document.getElementById('survey');
-    if (!survey || survey.style.display === 'none') return;
-    surveyTimer = setTimeout(function(){
-      // Silent return to home screen — reset everything
-      var survey = document.getElementById('survey');
-      var home   = document.getElementById('home');
-      var thanks = document.getElementById('thanks');
-      if (survey) survey.style.display = 'none';
-      if (thanks) thanks.style.display = 'none';
-      if (home)   home.style.display   = '';
-      // Clear all form fields silently
-      ['name','surname','phone','email','feedback'].forEach(function(id){
-        var el = document.getElementById(id);
-        if (el) el.value = '';
-      });
-      var popia = document.getElementById('popia');
-      var mk    = document.getElementById('mk');
-      if (popia) popia.checked = false;
-      if (mk)    mk.checked    = false;
-      // Clear selected answers
-      document.querySelectorAll('.opt.active').forEach(function(el){
-        el.classList.remove('active');
-      });
-      // Clear any saved form state
-      try{ sessionStorage.removeItem('cl_form_state'); }catch(_){}
-    }, SURVEY_TIMEOUT_MS);
-  }
-
-  // Reset timer on any user interaction
-  ['touchstart','click','keydown','scroll','input','change'].forEach(function(ev){
-    document.addEventListener(ev, resetSurveyTimer, { passive: true });
-  });
-
-  // Reset survey timer whenever user starts a review — hooked via load event
-  // (avoids overwriting startSurvey which causes button to break)
-  document.addEventListener('DOMContentLoaded', function(){
-    resetSurveyTimer();
-    // Hook into the actual startBtn click directly instead of wrapping startSurvey
-    var btn = document.getElementById('startBtn');
-    if (btn) btn.addEventListener('click', function(){ resetSurveyTimer(); }, { passive: true });
-  });
-})();
 
 /* ===== QUESTIONS ===== */
 const QUESTIONS=[
@@ -641,45 +451,19 @@ document.addEventListener('DOMContentLoaded', ()=>{
 /* ===== SUBMIT ===== */
 let inFlight = false;
 function within24h(ts){return (Date.now() - Number(ts)) < 24*60*60*1000;}
-
-/* Cookie helpers — survive QR scan sessions on iOS Safari unlike localStorage */
-function getCookie_(name){
-  try{var m=document.cookie.match('(^|;)\s*'+name+'\s*=\s*([^;]+)');return m?decodeURIComponent(m[2]):null;}catch(_){return null;}
-}
-function setCookie_(name,value,hours){
-  try{var exp=new Date(Date.now()+hours*3600*1000).toUTCString();
-  document.cookie=name+'='+encodeURIComponent(value)+';expires='+exp+';path=/;SameSite=Lax';}catch(_){}
-}
-
 function dupLocalBlockIfAny(){
   const phone=val('phone'); const email=(val('email')||'').toLowerCase();
   if(!phone && !email) return false;
-  const store = CFG.storeId || '';
-  // Check cookie (works on iOS QR scans) AND localStorage (fallback)
-  if(phone){
-    const k='cl_ph_'+store+'_'+phone;
-    const t=getCookie_(k)||localStorage.getItem(k);
-    if(t && within24h(t)) return true;
-  }
-  if(email){
-    const k='cl_em_'+store+'_'+email;
-    const t=getCookie_(k)||localStorage.getItem(k);
-    if(t && within24h(t)) return true;
-  }
+  const kP = phone ? `cl_last_phone_${phone}` : null;
+  const kE = email ? `cl_last_email_${email}` : null;
+  if(kP && localStorage.getItem(kP) && within24h(localStorage.getItem(kP))) return true;
+  if(kE && localStorage.getItem(kE) && within24h(localStorage.getItem(kE))) return true;
   return false;
 }
 function dupLocalMark(){
   const phone=val('phone'); const email=(val('email')||'').toLowerCase();
-  const store = CFG.storeId || '';
-  const ts = String(Date.now());
-  if(phone){
-    const k='cl_ph_'+store+'_'+phone;
-    setCookie_(k,ts,24); try{localStorage.setItem(k,ts);}catch(_){}
-  }
-  if(email){
-    const k='cl_em_'+store+'_'+email;
-    setCookie_(k,ts,24); try{localStorage.setItem(k,ts);}catch(_){}
-  }
+  if(phone) localStorage.setItem(`cl_last_phone_${phone}`, String(Date.now()));
+  if(email) localStorage.setItem(`cl_last_email_${email}`, String(Date.now()));
 }
 
 function fireAndForgetSend(bodyStr){
@@ -819,20 +603,20 @@ function toast(msg){const s=document.getElementById('statusTxt');if(!s)return;s.
     CFG.deviceId    = ((mode === 'qr-in') ? 'QRIN-' : 'QRDRIVE-') + (slug || (qp('store')||'unknown'));
 
     try{
-      // Cookies persist across QR scan sessions on iOS Safari — localStorage does not
-      var uidKey = 'cl_qr_uid_' + CFG.storeId + '_' + mode;
-      var uid = getCookie_(uidKey);
-      if(!uid){ uid = gen(); setCookie_(uidKey, uid, 24*30); } // 30-day uid cookie
+      var uidKey = 'cl_qr_uid_' + mode;
+      var uid = localStorage.getItem(uidKey);
+      if(!uid){ uid = gen(); localStorage.setItem(uidKey, uid); }
       window.CL_QR_ctx.uid = uid;
 
       window.CL_QR_canSubmit = function(){
-        // Block key: store + mode, expires in 24h after submission
-        var doneKey = 'cl_qr_done_' + CFG.storeId + '_' + mode;
-        return !getCookie_(doneKey);
+        var key = 'cl_qr_last_' + mode + '_' + uid;
+        var last = parseInt(localStorage.getItem(key)||'0',10);
+        if (last && (Date.now()-last) < 24*60*60*1000) return false;
+        return true;
       };
       window.CL_QR_markSubmitted = function(){
-        var doneKey = 'cl_qr_done_' + CFG.storeId + '_' + mode;
-        setCookie_(doneKey, '1', 24); // 24-hour block cookie
+        var key = 'cl_qr_last_' + mode + '_' + uid;
+        localStorage.setItem(key, String(Date.now()));
       };
     }catch(_){}
   }else{
@@ -899,6 +683,11 @@ function toast(msg){const s=document.getElementById('statusTxt');if(!s)return;s.
     }catch(e){ console.error('Render safeguard error:', e); }
   }
   window.addEventListener('load', safeRenderNow);
+  if (typeof window.startSurvey === 'function' && !window.startSurvey._patched){
+    var _orig = window.startSurvey;
+    window.startSurvey = function(){ _orig.apply(this, arguments); safeRenderNow(); };
+    window.startSurvey._patched = true;
+  }
 })();
 </script>
 
@@ -920,21 +709,12 @@ window.startSurvey = window.startSurvey || function(){
 <!-- === HEARTBEAT — tablets only, not QR scans === -->
 <script>
 (function(){
-  // Only send heartbeats from dedicated tablets — never from customer QR scans
-  // A device is a tablet if its deviceId does NOT start with QR- and src param is not qr-in/qr-drive
-  function isTablet(){
-    try{
-      const deviceId = (CFG && CFG.deviceId) || '';
-      const src = (new URL(location.href).searchParams.get('src') || '').toLowerCase();
-      // QR devices have IDs starting with QR- or src param of qr-in/qr-drive
-      if (/^QR-/i.test(deviceId)) return false;
-      if (src === 'qr-in' || src === 'qr-drive') return false;
-      return true;
-    }catch(_){ return false; }
-  }
-
-  // Exit immediately if this is a QR scan — no heartbeat, no tracking
-  if (!isTablet()) return;
+  // Exit immediately for QR scans — heartbeat is for tablets only
+  try{
+    const deviceId = (CFG && CFG.deviceId) || '';
+    const src = (new URL(location.href).searchParams.get('src') || '').toLowerCase();
+    if (/^QR-/i.test(deviceId) || src === 'qr-in' || src === 'qr-drive') return;
+  }catch(_){}
 
   const HEARTBEAT_MS = 120000; // every 2 minutes
 
