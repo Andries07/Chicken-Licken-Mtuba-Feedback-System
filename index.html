@@ -180,7 +180,7 @@
           <input type="checkbox" id="popia" style="margin-top:3px">
           <small>
             I consent to processing my personal info for service quality in line with POPIA and I allow Chicken Licken to contact me regarding this feedback.
-            <a href="privacy.html" target="_blank" rel="noopener" style="color:#ff6900;text-decoration:underline;white-space:nowrap;">Privacy Policy</a>
+            <a href="privacy.html" onclick="saveFormState()" style="color:#ff6900;text-decoration:underline;white-space:nowrap;">Privacy Policy</a>
           </small>
         </label>
         <label style="display:grid;grid-template-columns:auto 1fr;gap:8px;align-items:start;margin-top:4px">
@@ -284,6 +284,70 @@ const CFG = {
   deviceLabel: getDeviceLabel(),
   deviceId:    getDeviceId()
 };
+
+
+/* ===== FORM STATE — save/restore when visiting privacy policy ===== */
+function saveFormState(){
+  try{
+    var state = {
+      name:     document.getElementById('name')     ? document.getElementById('name').value     : '',
+      surname:  document.getElementById('surname')  ? document.getElementById('surname').value  : '',
+      phone:    document.getElementById('phone')    ? document.getElementById('phone').value    : '',
+      email:    document.getElementById('email')    ? document.getElementById('email').value    : '',
+      feedback: document.getElementById('feedback') ? document.getElementById('feedback').value : '',
+      popia:    document.getElementById('popia')    ? document.getElementById('popia').checked  : false,
+      mk:       document.getElementById('mk')       ? document.getElementById('mk').checked     : false,
+      answers:  Array.from(document.querySelectorAll('.opt.active')).map(function(el){
+        var row = el.closest('[data-qid]');
+        return { qid: row ? row.dataset.qid : '', val: el.dataset.val || el.textContent.trim() };
+      }),
+      surveyOpen: (function(){
+        var s = document.getElementById('survey');
+        return s ? (s.style.display !== 'none' && s.style.display !== '') : false;
+      })()
+    };
+    sessionStorage.setItem('cl_form_state', JSON.stringify(state));
+  }catch(_){}
+}
+
+function restoreFormState(){
+  try{
+    var raw = sessionStorage.getItem('cl_form_state');
+    if(!raw) return;
+    var state = JSON.parse(raw);
+    sessionStorage.removeItem('cl_form_state');
+    if(state.surveyOpen){
+      var survey = document.getElementById('survey');
+      var home   = document.getElementById('home');
+      if(survey) survey.style.display = 'grid';
+      if(home)   home.style.display   = 'none';
+    }
+    setTimeout(function(){
+      if(state.name     && document.getElementById('name'))     document.getElementById('name').value     = state.name;
+      if(state.surname  && document.getElementById('surname'))  document.getElementById('surname').value  = state.surname;
+      if(state.phone    && document.getElementById('phone'))    document.getElementById('phone').value    = state.phone;
+      if(state.email    && document.getElementById('email'))    document.getElementById('email').value    = state.email;
+      if(state.feedback && document.getElementById('feedback')) document.getElementById('feedback').value = state.feedback;
+      if(state.popia    !== undefined && document.getElementById('popia')) document.getElementById('popia').checked = state.popia;
+      if(state.mk       !== undefined && document.getElementById('mk'))    document.getElementById('mk').checked    = state.mk;
+      if(state.answers && state.answers.length){
+        state.answers.forEach(function(a){
+          if(!a.qid) return;
+          var row = document.querySelector('[data-qid="'+a.qid+'"]');
+          if(!row) return;
+          row.querySelectorAll('.opt').forEach(function(opt){
+            if((opt.dataset.val && opt.dataset.val === a.val) || opt.textContent.trim() === a.val){
+              opt.classList.add('active');
+            }
+          });
+        });
+      }
+    }, 150);
+  }catch(_){}
+}
+
+// Restore on page load if returning from privacy page
+(function(){ restoreFormState(); })();
 
 /* ===== QUESTIONS ===== */
 const QUESTIONS=[
@@ -451,19 +515,29 @@ document.addEventListener('DOMContentLoaded', ()=>{
 /* ===== SUBMIT ===== */
 let inFlight = false;
 function within24h(ts){return (Date.now() - Number(ts)) < 24*60*60*1000;}
+
+/* Cookie helpers — persist across QR scan sessions on iOS Safari */
+function getCookie_(name){
+  try{var m=document.cookie.match('(^|;)\s*'+name+'\s*=\s*([^;]+)');return m?decodeURIComponent(m[2]):null;}catch(_){return null;}
+}
+function setCookie_(name,value,hours){
+  try{var exp=new Date(Date.now()+hours*3600*1000).toUTCString();
+  document.cookie=name+'='+encodeURIComponent(value)+';expires='+exp+';path=/;SameSite=Lax';}catch(_){}
+}
 function dupLocalBlockIfAny(){
   const phone=val('phone'); const email=(val('email')||'').toLowerCase();
   if(!phone && !email) return false;
-  const kP = phone ? `cl_last_phone_${phone}` : null;
-  const kE = email ? `cl_last_email_${email}` : null;
-  if(kP && localStorage.getItem(kP) && within24h(localStorage.getItem(kP))) return true;
-  if(kE && localStorage.getItem(kE) && within24h(localStorage.getItem(kE))) return true;
+  const store = (CFG && CFG.storeId) || '';
+  if(phone){const k='cl_ph_'+store+'_'+phone;const t=getCookie_(k)||localStorage.getItem(k);if(t&&within24h(t))return true;}
+  if(email){const k='cl_em_'+store+'_'+email;const t=getCookie_(k)||localStorage.getItem(k);if(t&&within24h(t))return true;}
   return false;
 }
 function dupLocalMark(){
   const phone=val('phone'); const email=(val('email')||'').toLowerCase();
-  if(phone) localStorage.setItem(`cl_last_phone_${phone}`, String(Date.now()));
-  if(email) localStorage.setItem(`cl_last_email_${email}`, String(Date.now()));
+  const store = (CFG && CFG.storeId) || '';
+  const ts = String(Date.now());
+  if(phone){const k='cl_ph_'+store+'_'+phone;setCookie_(k,ts,24);try{localStorage.setItem(k,ts);}catch(_){}}
+  if(email){const k='cl_em_'+store+'_'+email;setCookie_(k,ts,24);try{localStorage.setItem(k,ts);}catch(_){}}
 }
 
 function fireAndForgetSend(bodyStr){
@@ -603,20 +677,20 @@ function toast(msg){const s=document.getElementById('statusTxt');if(!s)return;s.
     CFG.deviceId    = ((mode === 'qr-in') ? 'QRIN-' : 'QRDRIVE-') + (slug || (qp('store')||'unknown'));
 
     try{
-      var uidKey = 'cl_qr_uid_' + mode;
-      var uid = localStorage.getItem(uidKey);
-      if(!uid){ uid = gen(); localStorage.setItem(uidKey, uid); }
+      // Cookies persist across QR scan sessions on iOS Safari — localStorage does not
+      var storeKey = (CFG && CFG.storeId) || 'store';
+      var uidKey = 'cl_qr_uid_' + storeKey + '_' + mode;
+      var uid = getCookie_(uidKey);
+      if(!uid){ uid = gen(); setCookie_(uidKey, uid, 24*30); }
       window.CL_QR_ctx.uid = uid;
 
       window.CL_QR_canSubmit = function(){
-        var key = 'cl_qr_last_' + mode + '_' + uid;
-        var last = parseInt(localStorage.getItem(key)||'0',10);
-        if (last && (Date.now()-last) < 24*60*60*1000) return false;
-        return true;
+        var doneKey = 'cl_qr_done_' + storeKey + '_' + mode;
+        return !getCookie_(doneKey);
       };
       window.CL_QR_markSubmitted = function(){
-        var key = 'cl_qr_last_' + mode + '_' + uid;
-        localStorage.setItem(key, String(Date.now()));
+        var doneKey = 'cl_qr_done_' + storeKey + '_' + mode;
+        setCookie_(doneKey, '1', 24);
       };
     }catch(_){}
   }else{
@@ -765,6 +839,49 @@ window.startSurvey = window.startSurvey || function(){
   window.addEventListener('load',   ()=>{ schedule(); ping('load'); });
   window.addEventListener('focus',  schedule);
   document.addEventListener('visibility', ()=>{ if (document.visibilityState==='visible') schedule(); });
+})();
+</script>
+
+
+<!-- === SURVEY INACTIVITY TIMER — 4 min silent reset === -->
+<script>
+(function(){
+  var TIMEOUT_MS = 4 * 60 * 1000;
+  var timer = null;
+
+  function resetTimer(){
+    clearTimeout(timer);
+    // Only active when survey is visible
+    var survey = document.getElementById('survey');
+    if(!survey || survey.style.display === 'none' || survey.style.display === '') return;
+    timer = setTimeout(function(){
+      // Silent return to home — clear all fields for next customer
+      var home   = document.getElementById('home');
+      var survey = document.getElementById('survey');
+      var thanks = document.getElementById('thanks');
+      if(survey) survey.style.display = 'none';
+      if(thanks) thanks.style.display = 'none';
+      if(home)   home.style.display   = '';
+      ['name','surname','phone','email','feedback'].forEach(function(id){
+        var el = document.getElementById(id); if(el) el.value = '';
+      });
+      var popia = document.getElementById('popia'); if(popia) popia.checked = false;
+      var mk    = document.getElementById('mk');    if(mk)    mk.checked    = false;
+      document.querySelectorAll('.opt.active').forEach(function(el){ el.classList.remove('active'); });
+      try{ sessionStorage.removeItem('cl_form_state'); }catch(_){}
+    }, TIMEOUT_MS);
+  }
+
+  // Reset on any interaction
+  ['touchstart','click','keydown','scroll','input','change'].forEach(function(ev){
+    document.addEventListener(ev, resetTimer, { passive: true });
+  });
+
+  // Start timer when startBtn is clicked (survey becomes visible)
+  document.addEventListener('DOMContentLoaded', function(){
+    var btn = document.getElementById('startBtn');
+    if(btn) btn.addEventListener('click', function(){ setTimeout(resetTimer, 200); }, { passive: true });
+  });
 })();
 </script>
 
