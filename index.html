@@ -660,7 +660,8 @@ function toast(msg){const s=document.getElementById('statusTxt');if(!s)return;s.
   };
 
   var slug  = (qp('s')||'').toLowerCase();
-  var src   = (qp('source')||'').toLowerCase();
+  // Support both 'source' (old) and 'src' (new URL format)
+  var src   = (qp('src')||qp('source')||'').toLowerCase();
 
   if (slug && STORE_BY_SLUG[slug]) {
     CFG.storeId = STORE_BY_SLUG[slug];
@@ -673,8 +674,14 @@ function toast(msg){const s=document.getElementById('statusTxt');if(!s)return;s.
     var mode = (src === 'qr-in') ? 'qr-in' : 'qr-drive';
     window.CL_QR_ctx.mode = mode;
 
-    CFG.deviceLabel = (mode === 'qr-in') ? 'QR Poster (Inside)' : 'QR Poster (Drive-Thru)';
-    CFG.deviceId    = ((mode === 'qr-in') ? 'QRIN-' : 'QRDRIVE-') + (slug || (qp('store')||'unknown'));
+    // Use deviceId and device label from URL params if provided (new URL format)
+    // Only fall back to generic labels if not provided (old URL format)
+    var urlDeviceId    = qp('deviceId') || qp('did');
+    var urlDeviceLabel = qp('device');
+    if (urlDeviceId)    CFG.deviceId    = urlDeviceId;
+    else                CFG.deviceId    = ((mode === 'qr-in') ? 'QRIN-' : 'QRDRIVE-') + (slug || (qp('store')||'unknown'));
+    if (urlDeviceLabel) CFG.deviceLabel = urlDeviceLabel.replace(/\+/g,' ');
+    else                CFG.deviceLabel = (mode === 'qr-in') ? 'QR Poster (Inside)' : 'QR Poster (Drive-Thru)';
 
     try{
       // Cookies persist across QR scan sessions on iOS Safari — localStorage does not
@@ -785,9 +792,12 @@ window.startSurvey = window.startSurvey || function(){
 (function(){
   // Exit immediately for QR scans — heartbeat is for tablets only
   try{
+    const u = new URL(location.href);
+    const src = (u.searchParams.get('src') || u.searchParams.get('source') || '').toLowerCase();
     const deviceId = (CFG && CFG.deviceId) || '';
-    const src = (new URL(location.href).searchParams.get('src') || '').toLowerCase();
-    if (/^QR-/i.test(deviceId) || src === 'qr-in' || src === 'qr-drive') return;
+    // Exit if src param indicates QR, OR deviceId starts with QR-, QRIN-, QRDRIVE-
+    if (src === 'qr-in' || src === 'qr-drive') return;
+    if (/^QR/i.test(deviceId)) return;
   }catch(_){}
 
   const HEARTBEAT_MS = 120000; // every 2 minutes
