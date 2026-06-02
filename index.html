@@ -227,7 +227,7 @@ function getParamAny(keys){const u=new URL(location.href);for(const k of keys){c
 function getParam(k){const u=new URL(location.href);return normSpaces(u.searchParams.get(k));}
 
 function getDeviceId(){
-  const keys=['device','deviceId','deviceid','did','DeviceId','DEVICEID'];
+  const keys=['deviceId','deviceid','did','DeviceId','DEVICEID','device'];
   let v = getParamAny(keys);
   if (v){
     try { localStorage.setItem('cl_deviceId', v); } catch(_) {}
