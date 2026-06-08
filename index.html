@@ -249,7 +249,7 @@ function getStoreId(){
     const cached = localStorage.getItem('cl_storeId')||'';
     if(cached) return cached;
   }catch(_){}
-  return 'CL-Mtuba';
+  return '';
 }
 function getDeviceLabel(){
   let v=getParam('device');
@@ -284,7 +284,7 @@ const CFG = {
   deviceLabel: getDeviceLabel(),
   deviceId:    getDeviceId()
 };
-
+console.log("STORE DETECTED:", CFG.storeId);
 
 /* ===== FORM STATE — save/restore when visiting privacy policy ===== */
 function saveFormState(){
