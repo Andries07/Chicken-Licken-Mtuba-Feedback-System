@@ -606,6 +606,7 @@ document.addEventListener('DOMContentLoaded', ()=>{
     submit.disabled = true;
 
     // keep UI instant
+   console.log(payload)
     fireAndForgetSend(JSON.stringify(payload));
 
     dupLocalMark();
